@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PhotoID Studio — Photos d'identité conformes</title>
+<meta name="description" content="Créez des photos d'identité conformes (passeport, visa, carte d'identité, permis) avec détourage du fond, cadrage biométrique automatique et planches prêtes à imprimer.">
+<meta name="theme-color" content="#0B63C5">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="PhotoID">
+<meta name="color-scheme" content="light">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark" aria-hidden="true">
+      <svg viewBox="0 0 32 32" width="26" height="26">
+        <rect x="3" y="6" width="26" height="20" rx="4" fill="none" stroke="currentColor" stroke-width="2"/>
+        <circle cx="16" cy="15" r="4.4" fill="none" stroke="currentColor" stroke-width="2"/>
+        <path d="M10 23c1.6-2.4 3.7-3.6 6-3.6s4.4 1.2 6 3.6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    </span>
+    <span class="brand-txt">
+      <strong>PhotoID Studio</strong>
+      <small>Photos d'identité conformes</small>
+    </span>
+  </div>
+  <div class="topbar-actions">
+    <span class="pill privacy" title="Les photos ne quittent jamais votre appareil">
+      <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path d="M8 1l5 2v4.2c0 3.2-2.1 5.6-5 6.8-2.9-1.2-5-3.6-5-6.8V3l5-2z" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>
+      100 % local
+    </span>
+    <button class="btn ghost sm" id="btnHelp" type="button">Guide</button>
+    <button class="btn primary sm" id="btnInstall" type="button" hidden>Installer</button>
+  </div>
+</header>
+
+<div class="banner" id="frameBanner" hidden>
+  Aperçu intégré : pour télécharger ou imprimer les fichiers, ouvrez l'application dans un nouvel onglet.
+</div>
+
+<main class="layout">
+
+  <!-- ===================== SCÈNE (aperçu) ===================== -->
+  <section class="stage">
+    <div class="stage-card">
+      <div class="stage-head">
+        <div class="stage-title">
+          <span class="dot-live"></span>
+          <span id="stageFormat">Passeport / CNIBE · 35 × 45 mm</span>
+        </div>
+        <div class="stage-tools">
+          <button class="chip-btn" id="btnGuides" type="button" aria-pressed="true" title="Afficher les repères biométriques">Repères</button>
+          <button class="chip-btn" id="btnOriginal" type="button" aria-pressed="false" title="Comparer avec la photo d'origine">Original</button>
+        </div>
+      </div>
+
+      <div class="canvas-wrap" id="canvasWrap">
+        <div class="photo-frame" id="photoFrame" hidden>
+          <canvas id="preview" aria-label="Aperçu de la photo d'identité"></canvas>
+          <svg id="guides" class="guides" aria-hidden="true"></svg>
+        </div>
+
+        <div class="empty" id="emptyState">
+          <div class="empty-icon" aria-hidden="true">
+            <svg viewBox="0 0 48 48" width="46" height="46">
+              <rect x="5" y="11" width="38" height="28" rx="6" fill="none" stroke="currentColor" stroke-width="2.4"/>
+              <circle cx="24" cy="24" r="6.2" fill="none" stroke="currentColor" stroke-width="2.4"/>
+              <path d="M15 36c2.2-3.4 5.3-5.1 9-5.1s6.8 1.7 9 5.1" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
+              <path d="M36 11l3-3" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <h2>Importez votre portrait</h2>
+          <p class="muted">Détection du visage, cadrage biométrique et détourage automatiques.</p>
+          <div class="row center">
+            <button class="btn primary" id="btnPickEmpty" type="button">Choisir une photo</button>
+            <button class="btn" id="btnCameraEmpty" type="button">Prendre une photo</button>
+          </div>
+          <button class="link-btn" id="btnDemoEmpty" type="button">Essayer avec un portrait d'exemple</button>
+        </div>
+
+        <div class="loading" id="loading" hidden>
+          <div class="spinner"></div>
+          <span id="loadingTxt">Chargement…</span>
+        </div>
+      </div>
+
+      <div class="stage-foot">
+        <div class="chips" id="chips"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== PANNEAU (réglages) ===================== -->
+  <aside class="panel">
+    <nav class="tabs" id="tabs" role="tablist">
+      <button role="tab" data-tab="source" class="active" type="button">Import</button>
+      <button role="tab" data-tab="format" type="button">Format</button>
+      <button role="tab" data-tab="cadrage" type="button">Cadrage</button>
+      <button role="tab" data-tab="fond" type="button">Fond</button>
+      <button role="tab" data-tab="retouche" type="button">Retouche</button>
+      <button role="tab" data-tab="planche" type="button">Planche</button>
+      <button role="tab" data-tab="export" type="button">Export</button>
+    </nav>
+
+    <div class="panes" id="panes">
+
+      <!-- Import -->
+      <section class="pane active" data-pane="source">
+        <div class="dropzone" id="dropzone" tabindex="0">
+          <svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true">
+            <path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+            <path d="M4 15v3.5A1.5 1.5 0 005.5 20h13a1.5 1.5 0 001.5-1.5V15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+          </svg>
+          <p class="dz-title">Glissez une photo ici</p>
+          <p class="dz-sub">JPG · PNG · WebP — 1 200 px minimum</p>
+          <div class="row center">
+            <button class="btn primary" id="btnPick" type="button">Galerie</button>
+            <button class="btn" id="btnCamera" type="button">Appareil photo</button>
+          </div>
+        </div>
+        <input type="file" id="fileInput" accept="image/*" hidden>
+        <input type="file" id="cameraFallback" accept="image/*" capture="user" hidden>
+        <ul class="tips">
+          <li><span>💡</span> Fond uni, sans ombre portée derrière la tête</li>
+          <li><span>💡</span> Lumière de face, jamais de contre-jour</li>
+          <li><span>💡</span> Visage de face, expression neutre, bouche fermée</li>
+          <li><span>💡</span> Sans lunettes, tête découverte, épaules visibles</li>
+        </ul>
+      </section>
+
+      <!-- Format -->
+      <section class="pane" data-pane="format">
+        <div class="pane-head">
+          <h3>Format du document</h3>
+          <span class="hint" id="formatPx"></span>
+        </div>
+        <div class="format-grid" id="formatGrid"></div>
+        <div class="custom-dims" id="customDims" hidden>
+          <label>Largeur <span class="unit">mm</span>
+            <input type="number" id="customW" min="20" max="150" step="1" value="35">
+          </label>
+          <label>Hauteur <span class="unit">mm</span>
+            <input type="number" id="customH" min="20" max="180" step="1" value="45">
+          </label>
+        </div>
+        <p class="note" id="formatNote"></p>
+      </section>
+
+      <!-- Cadrage -->
+      <section class="pane" data-pane="cadrage">
+        <div class="pane-head">
+          <h3>Cadrage biométrique</h3>
+          <span class="badge-ok" id="autoBadge">Automatique</span>
+        </div>
+
+        <div class="field">
+          <div class="field-head"><label for="sHead">Hauteur de la tête</label><output id="oHead">—</output></div>
+          <input type="range" id="sHead" min="40" max="85" value="72" step="0.5">
+          <p class="field-hint" id="hHeadRange"></p>
+        </div>
+
+        <div class="field">
+          <div class="field-head"><label for="sZoom">Zoom</label><output id="oZoom">100 %</output></div>
+          <input type="range" id="sZoom" min="85" max="120" value="100" step="1">
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <div class="field-head"><label for="sX">Position H</label><output id="oX">0</output></div>
+            <input type="range" id="sX" min="-18" max="18" value="0" step="0.5">
+          </div>
+          <div class="field">
+            <div class="field-head"><label for="sY">Position V</label><output id="oY">0</output></div>
+            <input type="range" id="sY" min="-14" max="14" value="0" step="0.5">
+          </div>
+        </div>
+
+        <div class="field">
+          <div class="field-head"><label for="sRot">Redressement</label><output id="oRot">0,0°</output></div>
+          <input type="range" id="sRot" min="-12" max="12" value="0" step="0.2">
+        </div>
+
+        <div class="row">
+          <button class="btn sm" id="btnAutoFrame" type="button">Recentrer automatiquement</button>
+          <button class="btn sm ghost" id="btnStraighten" type="button">Redresser</button>
+        </div>
+        <p class="note">Le cadrage automatique aligne le sommet du crâne, le menton et la ligne des yeux sur les cotes officielles du format choisi.</p>
+      </section>
+
+      <!-- Fond -->
+      <section class="pane" data-pane="fond">
+        <div class="pane-head">
+          <h3>Arrière-plan</h3>
+          <span class="badge-ok" id="bgBadge">Détouré</span>
+        </div>
+        <div class="seg-control" id="bgMode">
+          <button data-mode="auto" class="active" type="button">Détourer le fond</button>
+          <button data-mode="original" type="button">Conserver l'original</button>
+        </div>
+
+        <p class="label-sm">Couleur de remplacement</p>
+        <div class="swatches" id="swatches"></div>
+
+        <div class="color-custom-row">
+          <label class="color-pick">
+            <input type="color" id="customBg" value="#FFFFFF">
+            <span>Couleur libre</span>
+          </label>
+          <span class="hint" id="bgReq"></span>
+        </div>
+
+        <div class="field">
+          <div class="field-head"><label for="sFeather">Adoucissement du contour</label><output id="oFeather">1,2 px</output></div>
+          <input type="range" id="sFeather" min="0" max="3" value="1.2" step="0.1">
+        </div>
+
+        <p class="note">Le fond est détecté dans votre navigateur, sans envoi de la photo. Les cheveux, les épaules et les contours du visage sont préservés.</p>
+      </section>
+
+      <!-- Retouche -->
+      <section class="pane" data-pane="retouche">
+        <div class="pane-head">
+          <h3>Qualité photographique</h3>
+          <button class="btn sm" id="btnAutoEnhance" type="button">Améliorer auto</button>
+        </div>
+
+        <div class="field">
+          <div class="field-head"><label for="sBright">Luminosité</label><output id="oBright">0</output></div>
+          <input type="range" id="sBright" min="-40" max="40" value="0" step="1">
+        </div>
+        <div class="field">
+          <div class="field-head"><label for="sContrast">Contraste</label><output id="oContrast">0</output></div>
+          <input type="range" id="sContrast" min="-40" max="40" value="0" step="1">
+        </div>
+        <div class="field">
+          <div class="field-head"><label for="sSat">Saturation</label><output id="oSat">100 %</output></div>
+          <input type="range" id="sSat" min="80" max="125" value="100" step="1">
+        </div>
+        <div class="field">
+          <div class="field-head"><label for="sSharp">Netteté</label><output id="oSharp">15</output></div>
+          <input type="range" id="sSharp" min="0" max="100" value="15" step="1">
+        </div>
+        <div class="field">
+          <div class="field-head"><label for="sWarm">Balance des blancs</label><output id="oWarm">0</output></div>
+          <input type="range" id="sWarm" min="-25" max="25" value="0" step="1">
+        </div>
+
+        <button class="btn sm ghost" id="btnResetEnhance" type="button">Réinitialiser</button>
+        <p class="note strong">Aucune retouche morphologique : les traits, les yeux, leur couleur et l'identité de la personne ne sont jamais modifiés. Seuls l'exposition, le contraste et la netteté sont ajustés.</p>
+      </section>
+
+      <!-- Planche -->
+      <section class="pane" data-pane="planche">
+        <div class="pane-head">
+          <h3>Planche d'impression</h3>
+          <span class="hint" id="sheetCount">—</span>
+        </div>
+        <div class="sheet-grid" id="sheetGrid"></div>
+
+        <div class="field">
+          <div class="field-head"><label for="sGap">Espacement</label><output id="oGap">4 mm</output></div>
+          <input type="range" id="sGap" min="0" max="8" value="4" step="0.5">
+        </div>
+
+        <div class="switch-row">
+          <label class="switch"><input type="checkbox" id="cbMarks" checked><span>Repères de découpe</span></label>
+          <label class="switch"><input type="checkbox" id="cbLines"><span>Lignes de coupe</span></label>
+        </div>
+
+        <p class="label-sm">Aperçu de la planche</p>
+        <div class="sheet-preview" id="sheetPreview"><canvas id="sheetCanvas"></canvas></div>
+        <p class="note" id="sheetInfo"></p>
+      </section>
+
+      <!-- Export -->
+      <section class="pane" data-pane="export">
+        <div class="pane-head"><h3>Export</h3></div>
+
+        <div class="field">
+          <div class="field-head"><label for="selDpi">Résolution de la photo</label></div>
+          <select id="selDpi">
+            <option value="300" selected>300 dpi — impression standard</option>
+            <option value="400">400 dpi</option>
+            <option value="600">600 dpi — haute définition</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <div class="field-head"><label for="sQuality">Qualité JPEG</label><output id="oQuality">95 %</output></div>
+          <input type="range" id="sQuality" min="80" max="100" value="95" step="1">
+        </div>
+
+        <div class="export-list">
+          <button class="export-item" id="expPhoto" type="button">
+            <span class="ei-ico">JPG</span>
+            <span class="ei-txt"><strong>Photo d'identité</strong><small id="expPhotoSub">413 × 531 px · 300 dpi</small></span>
+            <span class="ei-arrow">↓</span>
+          </button>
+          <button class="export-item" id="expPng" type="button">
+            <span class="ei-ico">PNG</span>
+            <span class="ei-txt"><strong>Photo détourée</strong><small>Fond transparent · usage numérique</small></span>
+            <span class="ei-arrow">↓</span>
+          </button>
+          <button class="export-item" id="expSheetJpg" type="button">
+            <span class="ei-ico">JPG</span>
+            <span class="ei-txt"><strong>Planche à imprimer</strong><small id="expSheetSub">10 × 15 cm · 300 dpi</small></span>
+            <span class="ei-arrow">↓</span>
+          </button>
+          <button class="export-item" id="expSheetPdf" type="button">
+            <span class="ei-ico pdf">PDF</span>
+            <span class="ei-txt"><strong>Planche PDF</strong><small id="expPdfSub">Dimensions réelles · prêt à imprimer</small></span>
+            <span class="ei-arrow">↓</span>
+          </button>
+        </div>
+
+        <p class="note">La résolution (300 dpi) est inscrite dans les fichiers : la photo conserve ses 35 × 45 mm réels.
+          À l'impression, choisissez « Taille réelle / 100 % » ou « Sans mise à l'échelle », sur papier photo.</p>
+      </section>
+
+    </div>
+  </aside>
+</main>
+
+<!-- Caméra -->
+<div class="modal" id="cameraModal" hidden>
+  <div class="modal-card">
+    <header>
+      <h3>Prendre une photo</h3>
+      <button class="icon-btn" id="btnCloseCamera" type="button" aria-label="Fermer">✕</button>
+    </header>
+    <div class="video-wrap">
+      <video id="video" autoplay playsinline muted></video>
+      <svg class="face-guide" viewBox="0 0 100 133" preserveAspectRatio="xMidYMid meet">
+        <ellipse cx="50" cy="62" rx="24" ry="32" fill="none" stroke="rgba(255,255,255,.75)" stroke-width="1.2" stroke-dasharray="3 3"/>
+        <line x1="50" y1="18" x2="50" y2="34" stroke="rgba(255,255,255,.5)" stroke-width="1"/>
+      </svg>
+    </div>
+    <div class="modal-actions">
+      <select id="cameraSelect" class="select-sm" hidden></select>
+      <button class="btn primary" id="btnShoot" type="button">Capturer</button>
+    </div>
+    <p class="modal-hint">Placez votre visage dans le repère, à environ 40 cm de l'objectif, sur fond uni.
+      L'aperçu n'est pas inversé : il correspond exactement à la photo obtenue.</p>
+  </div>
+</div>
+
+<!-- Guide -->
+<div class="modal" id="helpModal" hidden>
+  <div class="modal-card wide">
+    <header>
+      <h3>Guide d'utilisation</h3>
+      <button class="icon-btn" id="btnCloseHelp" type="button" aria-label="Fermer">✕</button>
+    </header>
+    <div class="help-body">
+      <ol class="steps">
+        <li><strong>Importez</strong> un portrait pris de face, sur fond uni.</li>
+        <li><strong>Choisissez le format</strong> du document (passeport, visa, permis…).</li>
+        <li><strong>Vérifiez le cadrage</strong> : les repères affichent le sommet du crâne, la ligne des yeux et le menton aux cotes officielles.</li>
+        <li><strong>Choisissez le fond</strong> : blanc, bleu clair ou gris, selon le pays.</li>
+        <li><strong>Composez la planche</strong> 10 × 15, 13 × 18 ou A4 avec repères de découpe.</li>
+        <li><strong>Exportez</strong> en JPG ou PDF et imprimez en taille réelle.</li>
+      </ol>
+      <h4>Conformité</h4>
+      <ul class="tips">
+        <li><span>✓</span> Taille exacte au millimètre, 300 dpi minimum</li>
+        <li><span>✓</span> Hauteur de tête et ligne des yeux contrôlées en continu</li>
+        <li><span>✓</span> Fond uni sans ombre, contours naturels conservés</li>
+        <li><span>✓</span> Aucune altération des traits du visage ni des yeux</li>
+      </ul>
+      <h4>Confidentialité</h4>
+      <p class="note">La détection du visage et le détourage sont exécutés sur votre appareil. Aucune photo n'est transmise à un serveur.</p>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<noscript>
+  <div class="banner" style="display:block">
+    JavaScript doit être activé pour utiliser PhotoID Studio.
+  </div>
+</noscript>
+<script>
+  // Filet de sécurité : si le module principal ne se charge pas, on prévient l'utilisateur.
+  window.addEventListener('error', function (e) {
+    if (e && e.target && (e.target.tagName === 'SCRIPT')) {
+      var b = document.getElementById('frameBanner');
+      if (b) { b.hidden = false; b.textContent = "Le chargement de l'application a échoué. Vérifiez votre connexion puis rechargez la page."; }
+    }
+  }, true);
+</script>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

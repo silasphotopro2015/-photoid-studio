@@ -1,0 +1,6 @@
+{
+  "appId": "dz.photoid.studio",
+  "appName": "PhotoID Studio",
+  "webDir": ".",
+  "bundledWebRuntime": false
+}
